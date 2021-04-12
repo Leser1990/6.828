@@ -278,12 +278,15 @@ page_init(void)
 	// NB: DO NOT actually touch the physical memory corresponding to
 	// free pages!
 	size_t i;
-	size_t kernel_page = ((uint32_t)boot_alloc(0) - KERNBASE) / PGSIZE;
-	size_t io_size = (EXTPHYSMEM - IOPHYSMEM) / PGSIZE;
-	for (i = 0; i < npages; i++) {
-		if (i == 0)
-			pages[i].pp_ref = 1;
-		else if (i >= npages_basemem && i < npages_basemem + io_size + kernel_page)
+	//size_t kernel_page = ((uint32_t)boot_alloc(0) - KERNBASE) / PGSIZE;
+	//size_t io_size = (EXTPHYSMEM - IOPHYSMEM) / PGSIZE;
+	size_t kernel_page = (size_t)ROUNDUP(((uint32_t)boot_alloc(0) - KERNBASE), PGSIZE) / PGSIZE;
+	size_t io_size = (size_t)ROUNDUP(EXTPHYSMEM - IOPHYSMEM, PGSIZE) / PGSIZE;
+
+	pages[0].pp_ref = 1;
+	for (i = 1; i < npages; i++) {
+
+		if (i >= npages_basemem && i < npages_basemem + io_size + kernel_page)
 			pages[i].pp_ref = 1;
 		else {
 			pages[i].pp_ref = 0;
