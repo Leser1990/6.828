@@ -322,7 +322,7 @@ page_free(struct PageInfo *pp)
 	assert(pp->pp_ref == 0);
 	assert(pp->pp_link == NULL);
 
-	pp->pp_link = page_free_list
+	pp->pp_link = page_free_list;
 	page_free_list = pp;
 }
 
@@ -403,7 +403,7 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 	pte_t *pte = NULL;
 
 	for (ndd = 0; ndd < size; ndd += PGSIZE) {
-		pte = pgdir_walk(pgdir, va, 1);
+		pte = pgdir_walk(pgdir, (void*)va, 1);
 		if (!pte)
 			return;
 
