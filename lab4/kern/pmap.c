@@ -54,8 +54,8 @@ i386_detect_memory(void)
 	npages = totalmem / (PGSIZE / 1024);
 	npages_basemem = basemem / (PGSIZE / 1024);
 
-	cprintf("Physical memory: %uK available, base = %uK, extended = %uK\n",
-		totalmem, basemem, totalmem - basemem);
+	cprintf("Physical memory: %uK available, base = %uK, extended = %uK, base_npages=%u\n",
+		totalmem, basemem, totalmem - basemem, npages_basemem);
 }
 
 
@@ -107,9 +107,9 @@ boot_alloc(uint32_t n)
 	// LAB 2: Your code here.
 	result = nextfree;
 	nextfree = ROUNDUP(nextfree + n, PGSIZE);
-	if (nextfree - result > npages * PGSIZE) {
-		panic("out of memory.\n");
-	}
+	if (nextfree - result > npages * PGSIZE)
+		panic("out of memory\n");
+
 	return result;
 }
 
@@ -133,6 +133,8 @@ mem_init(void)
 
 	// Remove this line when you're ready to test this function.
 	//panic("mem_init: This function is not finished\n");
+	extern char edata[], end[];
+	cprintf("edata=%x, end=%x\n", (uint32_t)edata, (uint32_t)end);
 
 	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
@@ -162,9 +164,8 @@ mem_init(void)
 	//////////////////////////////////////////////////////////////////////
 	// Make 'envs' point to an array of size 'NENV' of 'struct Env'.
 	// LAB 3: Your code here.
-	n = NENV * sizeof(struct Env);
-	envs = (struct Env *)boot_alloc(n);
-	memset(envs, 0x0, n);
+	envs = (struct Env *)boot_alloc(NENV * sizeof(struct Env));
+	memset(envs, 0x0, NENV * sizeof(struct Env));
 
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
@@ -282,7 +283,6 @@ mem_init_mp(void)
 						PADDR(percpu_kstacks[i]),
 						PTE_W);
 	}
-
 }
 
 // --------------------------------------------------------------
@@ -322,14 +322,15 @@ page_init(void)
 	// NB: DO NOT actually touch the physical memory corresponding to
 	// free pages!
 	size_t i;
-	size_t kernel_page = (size_t)ROUNDUP(((uint32_t)boot_alloc(0) - KERNBASE), PGSIZE) / PGSIZE;
-	size_t io_size = (size_t)ROUNDUP(EXTPHYSMEM - IOPHYSMEM, PGSIZE) / PGSIZE;
+	//size_t io_holes = (EXTPHYSMEM - IOPHYSMEM) / PGSIZE;
+	//size_t kernel_pages = ((uint32_t)boot_alloc(0) - KERNBASE) / PGSIZE;
+	size_t io_holes = (size_t)ROUNDUP((EXTPHYSMEM - IOPHYSMEM), PGSIZE) / PGSIZE;
+	size_t kernel_pages = (size_t)ROUNDUP(((uint32_t)boot_alloc(0) - KERNBASE), PGSIZE) / PGSIZE;
 
-	pages[0].pp_ref = 1;
+    pages[0].pp_ref = 1;
 	pages[PGNUM(MPENTRY_PADDR)].pp_ref = 1;
-
 	for (i = 1; i < npages; i++) {
-		if (i >= npages_basemem && i < npages_basemem + io_size + kernel_page)
+		if (i >= npages_basemem && i < npages_basemem + io_holes + kernel_pages)
 			pages[i].pp_ref = 1;
 		else if (i != PGNUM(MPENTRY_PADDR)) {
 			pages[i].pp_ref = 0;
@@ -337,7 +338,6 @@ page_init(void)
 			page_free_list = &pages[i];
 		}
 	}
-	cprintf("init: free_list is 0x%x\n", page_free_list);
 }
 
 //
@@ -366,7 +366,6 @@ page_alloc(int alloc_flags)
 
 	if (alloc_flags & ALLOC_ZERO)
 		memset(page2kva(p_ret), 0x0, PGSIZE);
-
 	return p_ret;
 }
 
@@ -428,8 +427,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 	pte_t *page_base = NULL;
 	uint32_t ptx = PTX(va); // page table index
 
-	if (!(pgdir[PDX(va)] & PTE_P))
-	{
+	if (!(pgdir[PDX(va)] & PTE_P)) {
 		if (!create)
 			return NULL;
 
@@ -460,10 +458,10 @@ static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
 	// Fill this function in
-	size_t ndd;
 	pde_t *entry = NULL;
+	size_t ndd = 0;
 
-	for (ndd = 0; ndd < size; ndd += PGSIZE) {
+	while (ndd < size) {
 		entry = pgdir_walk(pgdir, (void *)va, 1);
 		if (!entry)
 			return;
@@ -472,6 +470,7 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 
 		pa += PGSIZE;
 		va += PGSIZE;
+		ndd += PGSIZE;
 	}
 }
 
@@ -510,11 +509,13 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 		return -E_NO_MEM;
 
 	pp->pp_ref += 1;
+
 	if (*entry & PTE_P) {
 		page_remove(pgdir, va);
 	}
 
 	*entry = page2pa(pp) | perm | PTE_P;
+	pgdir[PDX(va)] |= perm;
 	return 0;
 }
 
@@ -567,16 +568,16 @@ void
 page_remove(pde_t *pgdir, void *va)
 {
 	// Fill this function in
-	pde_t *entry = NULL;
-	struct PageInfo *page = NULL;
+	struct PageInfo *pg = NULL;
+	pde_t *pde = NULL;
 
-	page = page_lookup(pgdir, va, &entry);
-	if (!page)
+	pg = page_lookup(pgdir, va, &pde);
+	if (!pg)
 		return;
 
-	page_decref(page);
+	page_decref(pg);
 	tlb_invalidate(pgdir, va);
-	*entry = 0;
+	*pde = 0;
 }
 
 //
@@ -624,14 +625,13 @@ mmio_map_region(physaddr_t pa, size_t size)
 	//
 	// Your code here:
 	//panic("mmio_map_region not implemented");
-	uintptr_t result = base;
-	base = ROUNDUP(base + size, PGSIZE);
+	uintptr_t ret = base;
+	base = (uintptr_t)ROUNDUP(base + size, PGSIZE);
 	if (base >= MMIOLIM)
 		panic("mmio_map_region size overlimit\n");
 
-	boot_map_region(kern_pgdir, result, size, pa, PTE_PCD|PTE_PWT|PTE_W);
-
-	return (void *)result;
+	boot_map_region(kern_pgdir, ret, size, pa, PTE_PCD|PTE_PWT|PTE_W);
+	return (void *)ret;
 }
 
 static uintptr_t user_mem_check_addr;

@@ -166,7 +166,7 @@ trap_init_percpu(void)
 	//				sizeof(struct Taskstate) - 1, 0);
 	//gdt[GD_TSS0 >> 3].sd_s = 0;
 	gdt[(GD_TSS0 >> 3) + i] = SEG16(STS_T32A, (uint32_t) (&thiscpu->cpu_ts),
-						sizeof(struct Taskstate) - 1, 0);
+					sizeof(struct Taskstate) - 1, 0);
 	gdt[(GD_TSS0 >> 3) + i].sd_s = 0;
 
 	// Load the TSS selector (like other segment selectors, the
@@ -228,10 +228,9 @@ trap_dispatch(struct Trapframe *tf)
 {
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
+	int32_t ret_code;
 
-	uint32_t ret_code;
-	cprintf("trap_dispatch trapno=%d\n", tf->tf_trapno);
-
+	//cprintf("trap_dispatch trapno=%u\n", tf->tf_trapno);
 	switch (tf->tf_trapno) {
 	case T_PGFLT:
 		page_fault_handler(tf);
@@ -274,14 +273,6 @@ trap_dispatch(struct Trapframe *tf)
 	// interrupt using lapic_eoi() before calling the scheduler!
 	// LAB 4: Your code here.
 
-	// Unexpected trap: The user process or the kernel has a bug.
-	print_trapframe(tf);
-	if (tf->tf_cs == GD_KT)
-		panic("unhandled trap in kernel");
-	else {
-		env_destroy(curenv);
-		return;
-	}
 }
 
 void

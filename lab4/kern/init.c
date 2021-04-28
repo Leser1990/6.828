@@ -25,6 +25,7 @@ i386_init(void)
 	// Can't call cprintf until after we do this!
 	cons_init();
 
+	cprintf("x=%d, y=%d\n", 3);
 	cprintf("6828 decimal is %o octal!\n", 6828);
 
 	// Lab 2 memory management initialization functions
@@ -50,6 +51,8 @@ i386_init(void)
 
 #if defined(TEST)
 	// Don't touch -- used by grading script!
+	ENV_CREATE(TEST, ENV_TYPE_USER);
+	ENV_CREATE(TEST, ENV_TYPE_USER);
 	ENV_CREATE(TEST, ENV_TYPE_USER);
 #else
 	// Touch all you want.
@@ -82,7 +85,7 @@ boot_aps(void)
 		if (c == cpus + cpunum())  // We've started already.
 			continue;
 
-		// Tell mpentry.S what stack to use 
+		// Tell mpentry.S what stack to use
 		mpentry_kstack = percpu_kstacks[c - cpus] + KSTKSIZE;
 		// Start the CPU at mpentry_start
 		lapic_startap(c->cpu_id, PADDR(code));
@@ -96,7 +99,7 @@ boot_aps(void)
 void
 mp_main(void)
 {
-	// We are in high EIP now, safe to switch to kern_pgdir 
+	// We are in high EIP now, safe to switch to kern_pgdir
 	lcr3(PADDR(kern_pgdir));
 	cprintf("SMP: CPU %d starting\n", cpunum());
 

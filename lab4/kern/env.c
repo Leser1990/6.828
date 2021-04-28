@@ -26,7 +26,7 @@ static struct Env *env_free_list;	// Free environment list
 // Set up global descriptor table (GDT) with separate segments for
 // kernel mode and user mode.  Segments serve many purposes on the x86.
 // We don't use any of their memory-mapping capabilities, but we need
-// them to switch privilege levels. 
+// them to switch privilege levels.
 //
 // The kernel and user segments are identical except for the DPL.
 // To load the SS register, the CPL must equal the DPL.  Thus,
@@ -191,7 +191,7 @@ env_setup_vm(struct Env *e)
 	//    - The functions in kern/pmap.h are handy.
 
 	// LAB 3: Your code here.
-	e->env_pgdir = (pte_t *)page2kva(p);
+	e->env_pgdir = (pde_t *)page2kva(p);
 	p->pp_ref ++;
 
 	for (i = 0; i < PDX(UTOP); i++) {
@@ -299,20 +299,20 @@ region_alloc(struct Env *e, void *va, size_t len)
 	//   You should round va down, and round (va + len) up.
 	//   (Watch out for corner-cases!)
 
-	void *start = (void *)ROUNDDOWN((uint32_t)va, PGSIZE);
-	void *end = (void *)ROUNDUP((uint32_t)va+len, PGSIZE);
-	void *i;
+	uint8_t *start = (void *)ROUNDDOWN((uint32_t)va, PGSIZE);
+	uint8_t *end = (void *)ROUNDUP((uint32_t)va + len, PGSIZE);
+	uint8_t *addr;
 	int r;
-	struct PageInfo *page = NULL;
 
-	for (i = start; i < end; i += PGSIZE) {
+	struct PageInfo *page = NULL;
+	for (addr = start; addr < end; addr += PGSIZE) {
 		page = page_alloc(0);
 		if (!page)
-			panic("region alloc failed, out of memory");
+			panic("there is no mem");
 
-		r = page_insert(e->env_pgdir, page, i, PTE_U | PTE_W);
-		if (r != 0)
-			panic("region alloc err");
+		r = page_insert(e->env_pgdir, page, addr, PTE_U | PTE_W);
+		if (r)
+			panic("region alloc failed");
 	}
 }
 
@@ -413,12 +413,10 @@ void
 env_create(uint8_t *binary, enum EnvType type)
 {
 	// LAB 3: Your code here.
-	int r;
 	struct Env *e;
-
-	r = env_alloc(&e, 0);
-	if (r < 0)
-		panic("env create err, alloc failed");
+	int rc;
+	if((rc = env_alloc(&e, 0)) != 0)
+		panic("env_create failed: env_alloc failed.\n");
 
 	load_icode(e, binary);
 	e->env_type = type;
@@ -557,12 +555,11 @@ env_run(struct Env *e)
 	}
 
 	curenv = e;
-	e->env_status = ENV_RUNNING;
-	e->env_runs += 1;
-
-	lcr3(PADDR(e->env_pgdir));
+	curenv->env_status = ENV_RUNNING;
+	curenv->env_runs++;
+	lcr3(PADDR(curenv->env_pgdir));
 	unlock_kernel();
-	env_pop_tf(&e->env_tf);
+	env_pop_tf(&curenv->env_tf);
 
 	//panic("env_run not yet implemented");
 }
