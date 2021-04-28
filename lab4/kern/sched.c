@@ -31,10 +31,10 @@ sched_yield(void)
 	// LAB 4: Your code here.
 	envid_t curenvid = curenv ? (curenv->env_id + 1) : 0;
 	int i;
-
 	for (i = 0; i < NENV; i++) {
 		idle = &envs[ENVX(curenvid + i)];
-		if (idle->env_status == ENV_RUNNABLE)
+		if ((idle->env_status == ENV_RUNNABLE)
+			&& (!curenv || idle->env_priority >= curenv->env_priority))
 			env_run(idle);
 	}
 
