@@ -25,6 +25,8 @@ pgfault(struct UTrapframe *utf)
 	//   (see <inc/memlayout.h>).
 
 	// LAB 4: Your code here.
+	if (! ((err & FEC_WR) && (uvpt[PGNUM(addr)] & PTE_COW)))
+		panic("pgfault: not copy-on-write");
 
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
@@ -33,8 +35,16 @@ pgfault(struct UTrapframe *utf)
 	//   You should make three system calls.
 
 	// LAB 4: Your code here.
+	addr = ROUNDDOWN(addr, PGSIZE);
+	if ((r = sys_page_alloc(0, addr, PTE_P|PTE_U|PTE_W)) < 0)
+		panic("pgfault: sys_page_alloc: %e", r);
+	if ((r = sys_page_map(0, addr, 0, PFTEMP, PTE_P|PTE_U|PTE_W)) < 0)
+		panic("pgfault: sys_page_map: %e", r);
+	memmove(PFTEMP, addr, PGSIZE);
+	if ((r = sys_page_unmap(0, PFTEMP)) < 0)
+		panic("pgfault: sys_page_unmap: %e", r);
 
-	panic("pgfault not implemented");
+	//panic("pgfault not implemented");
 }
 
 //
@@ -78,7 +88,29 @@ envid_t
 fork(void)
 {
 	// LAB 4: Your code here.
-	panic("fork not implemented");
+	//panic("fork not implemented");
+	envid_t envid;
+	uint8_t *addr;
+	int r;
+
+	set_pgfault_handler(pgfault);
+
+	envid = sys_exofork();
+	if (envid < 0) {
+		panic("fork: sys_exofork failed!");
+	} else if (envid == 0) {
+		thisenv = &envs[ENVX(sys_getenvid())];
+		return 0;
+	}
+
+	for (addr = (uint8_t*) UTEXT; addr < USTACKTOP; addr += PGSIZE)
+		duppage(envid, addr);
+
+
+	if ((r = sys_env_set_status(envid, ENV_RUNNABLE)) < 0)
+		panic("fork: sys_env_set_status: %e", r);
+
+	return envid;
 }
 
 // Challenge!

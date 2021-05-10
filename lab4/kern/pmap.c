@@ -159,13 +159,14 @@ mem_init(void)
 	// Your code goes here:
 	n = npages * sizeof(struct PageInfo);
 	pages = (struct PageInfo *)boot_alloc(n);
-	memset(pages, 0x0, n);
+	memset(pages, 0, n);
 
 	//////////////////////////////////////////////////////////////////////
 	// Make 'envs' point to an array of size 'NENV' of 'struct Env'.
 	// LAB 3: Your code here.
-	envs = (struct Env *)boot_alloc(NENV * sizeof(struct Env));
-	memset(envs, 0x0, NENV * sizeof(struct Env));
+	n = NENV * sizeof(struct Env);
+	envs = (struct Env *)boot_alloc(n);
+	memset(envs, 0, n);
 
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
