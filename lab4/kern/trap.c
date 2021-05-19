@@ -71,7 +71,9 @@ trap_init(void)
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
-	/* Refer: https://wiki.osdev.org/Exceptions */
+	/* Refer: https://wiki.osdev.org/Exceptions 
+	 *        https://pdos.csail.mit.edu/6.828/2018/lec/x86_idt.pdf
+	 */
 	void t_divide();
 	void t_debug();
 	void t_nmi();

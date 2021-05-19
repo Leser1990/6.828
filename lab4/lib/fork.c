@@ -64,7 +64,17 @@ duppage(envid_t envid, unsigned pn)
 	int r;
 
 	// LAB 4: Your code here.
-	panic("duppage not implemented");
+	//panic("duppage not implemented");
+	void *addr = (void *)(pn * PGSIZE);
+	if (uvpt[pn] & (PTE_W | PTE_COW)) {
+		if ((r = sys_page_map(0, addr, envid, addr, PTE_COW | PTE_P | PTE_U)) < 0)
+			panic("duppage: sys_page_map envid failed");
+		if ((r = sys_page_map(0, addr, 0, addr, PTE_COW | PTE_P | PTE_U)) < 0)
+			panic("duppage: sys_page_map 0 failed");
+	} else {
+		if ((r = sys_page_map(0, addr, envid, addr, PTE_P | PTE_U)) < 0)
+			panic("duppage: sys_page_map failed");
+	}
 	return 0;
 }
 
@@ -103,9 +113,12 @@ fork(void)
 		return 0;
 	}
 
-	for (addr = (uint8_t*) UTEXT; addr < USTACKTOP; addr += PGSIZE)
-		duppage(envid, addr);
-
+	for (addr = (uint8_t*) UTEXT; addr < UTOP; addr += PGSIZE) {
+		if ((uvpt[PDX(addr)] & PTE_P)  && (uvpt[PGNUM(addr)] & PTE_P)
+		   && (uvpt[PGNUM(addr)] & PTE_U)) {	
+			duppage(envid, PGNUM(addr));
+		}
+	}
 
 	if ((r = sys_env_set_status(envid, ENV_RUNNABLE)) < 0)
 		panic("fork: sys_env_set_status: %e", r);
