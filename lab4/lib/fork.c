@@ -25,7 +25,11 @@ pgfault(struct UTrapframe *utf)
 	//   (see <inc/memlayout.h>).
 
 	// LAB 4: Your code here.
-	if (! ((err & FEC_WR) && (uvpt[PGNUM(addr)] & PTE_COW)))
+	if (!( (err & FEC_WR)
+		&& (uvpt[PDX(addr)] & PTE_P)
+		&& (uvpt[PGNUM(addr)] & PTE_COW)
+		&& (uvpt[PGNUM(addr)] & PTE_P)
+		))
 		panic("pgfault: not copy-on-write");
 
 	// Allocate a new page, map it at a temporary location (PFTEMP),
@@ -36,11 +40,13 @@ pgfault(struct UTrapframe *utf)
 
 	// LAB 4: Your code here.
 	addr = ROUNDDOWN(addr, PGSIZE);
-	if ((r = sys_page_alloc(0, addr, PTE_P|PTE_U|PTE_W)) < 0)
-		panic("pgfault: sys_page_alloc: %e", r);
-	if ((r = sys_page_map(0, addr, 0, PFTEMP, PTE_P|PTE_U|PTE_W)) < 0)
+	if ((r = sys_page_alloc(0, PFTEMP, PTE_P|PTE_U|PTE_W)) < 0)
+		panic("pgfault: sys_page_alloc pftemp: %e", r);
+	memcpy(PFTEMP, addr, PGSIZE);
+
+	if ((r = sys_page_map(0, PFTEMP, 0, addr, PTE_P|PTE_U|PTE_W)) < 0)
 		panic("pgfault: sys_page_map: %e", r);
-	memmove(PFTEMP, addr, PGSIZE);
+
 	if ((r = sys_page_unmap(0, PFTEMP)) < 0)
 		panic("pgfault: sys_page_unmap: %e", r);
 
@@ -100,7 +106,7 @@ fork(void)
 	// LAB 4: Your code here.
 	//panic("fork not implemented");
 	envid_t envid;
-	uint8_t *addr;
+	uint32_t addr;
 	int r;
 
 	set_pgfault_handler(pgfault);
@@ -113,12 +119,21 @@ fork(void)
 		return 0;
 	}
 
-	for (addr = (uint8_t*) UTEXT; addr < UTOP; addr += PGSIZE) {
+	for (addr = UTEXT; addr < UTOP; addr += PGSIZE) {
 		if ((uvpt[PDX(addr)] & PTE_P)  && (uvpt[PGNUM(addr)] & PTE_P)
-		   && (uvpt[PGNUM(addr)] & PTE_U)) {	
+		   && (uvpt[PGNUM(addr)] & PTE_U)) {
 			duppage(envid, PGNUM(addr));
 		}
 	}
+
+	/* Execption stack */
+	if ((r = sys_page_alloc(envid, (void *)(UXSTACKTOP - PGSIZE), PTE_P | PTE_U | PTE_W)) < 0)
+		panic("Uxstacktop alloc failed, envid=%d", envid);
+
+	/* Set pgfault upcall */
+	extern void _pgfault_upcall(void);
+	if ((r = sys_env_set_pgfault_upcall(envid, _pgfault_upcall)) < 0)
+		panic("Set pgfault upcall");
 
 	if ((r = sys_env_set_status(envid, ENV_RUNNABLE)) < 0)
 		panic("fork: sys_env_set_status: %e", r);

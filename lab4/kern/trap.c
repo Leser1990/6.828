@@ -71,7 +71,7 @@ trap_init(void)
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
-	/* Refer: https://wiki.osdev.org/Exceptions 
+	/* Refer: https://wiki.osdev.org/Exceptions
 	 *        https://pdos.csail.mit.edu/6.828/2018/lec/x86_idt.pdf
 	 */
 	void t_divide();
@@ -388,7 +388,7 @@ page_fault_handler(struct Trapframe *tf)
 	if (curenv->env_pgfault_upcall) {
 
 		struct UTrapframe *utr = NULL;
-		if (UXSTACKTOP - PGSIZE < tf->tf_esp && tf->tf_esp < UXSTACKTOP) {
+		if (UXSTACKTOP - PGSIZE <= tf->tf_esp && tf->tf_esp < UXSTACKTOP) {
 			utr = (struct UTrapframe *)(tf->tf_esp - sizeof(struct UTrapframe) - 4);
 		} else {
 			utr = (struct UTrapframe *)(UXSTACKTOP - sizeof(struct UTrapframe));
