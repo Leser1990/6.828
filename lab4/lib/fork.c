@@ -26,11 +26,11 @@ pgfault(struct UTrapframe *utf)
 
 	// LAB 4: Your code here.
 	if (!( (err & FEC_WR)
-		&& (uvpt[PDX(addr)] & PTE_P)
+		&& (uvpd[PDX(addr)] & PTE_P)
 		&& (uvpt[PGNUM(addr)] & PTE_COW)
 		&& (uvpt[PGNUM(addr)] & PTE_P)
 		))
-		panic("pgfault: not copy-on-write");
+		panic("pgfault: not copy-on-write, %x, %x", uvpd[PDX(addr)], uvpt[PGNUM(addr)]);
 
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
@@ -120,7 +120,10 @@ fork(void)
 	}
 
 	for (addr = UTEXT; addr < UTOP; addr += PGSIZE) {
-		if ((uvpt[PDX(addr)] & PTE_P)  && (uvpt[PGNUM(addr)] & PTE_P)
+		if (addr == UXSTACKTOP - PGSIZE)
+			continue;
+	
+		if ((uvpd[PDX(addr)] & PTE_P)  && (uvpt[PGNUM(addr)] & PTE_P)
 		   && (uvpt[PGNUM(addr)] & PTE_U)) {
 			duppage(envid, PGNUM(addr));
 		}
