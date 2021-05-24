@@ -366,7 +366,7 @@ page_alloc(int alloc_flags)
 	p_ret->pp_link = NULL;
 
 	if (alloc_flags & ALLOC_ZERO)
-		memset(page2kva(p_ret), 0x0, PGSIZE);
+		memset(page2kva(p_ret), 0, PGSIZE);
 	return p_ret;
 }
 
@@ -827,7 +827,7 @@ check_page_alloc(void)
 	page_free_list = fl;
 
 	// free the pages we took
-	page_free(pp);
+	page_free(pp0);
 	page_free(pp1);
 	page_free(pp2);
 

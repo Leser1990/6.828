@@ -152,7 +152,7 @@ trap_init(void)
 	SETGATE(idt[IRQ_OFFSET + 14], 0, GD_KT, t_irq14, 0)
 	SETGATE(idt[IRQ_OFFSET + 15], 0, GD_KT, t_irq15, 0)
 
-	SETGATE(idt[T_SYSCALL], 1, GD_KT, t_syscall, 3)
+	SETGATE(idt[T_SYSCALL], 0, GD_KT, t_syscall, 3)
 
 	// Per-CPU setup
 	trap_init_percpu();
