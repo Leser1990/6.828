@@ -270,10 +270,10 @@ trap_dispatch(struct Trapframe *tf)
 	switch (tf->tf_trapno) {
 	case T_PGFLT:
 		page_fault_handler(tf);
-		break;
+		return;
 	case T_BRKPT:
 		monitor(tf);
-		break;
+		return;
 	case T_SYSCALL:
 		// Refer to lib/syscall.c to see the parameters register name
 		ret_code = syscall(tf->tf_regs.reg_eax,
@@ -283,16 +283,8 @@ trap_dispatch(struct Trapframe *tf)
 						   tf->tf_regs.reg_edi,
 						   tf->tf_regs.reg_esi);
 		tf->tf_regs.reg_eax = ret_code;
-		break;
+		return;
 	default:
-		// Unexpected trap: The user process or the kernel has a bug.
-		print_trapframe(tf);
-		if (tf->tf_cs == GD_KT)
-			panic("unhandled trap in kernel");
-		else {
-			env_destroy(curenv);
-			return;
-		}
 		break;
 	}
 
@@ -308,7 +300,21 @@ trap_dispatch(struct Trapframe *tf)
 	// Handle clock interrupts. Don't forget to acknowledge the
 	// interrupt using lapic_eoi() before calling the scheduler!
 	// LAB 4: Your code here.
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER) {
+		//cprintf("Timer interrupt on irq 0\n");
+		lapic_eoi();
+		sched_yield();
+		return;
+	}
 
+	// Unexpected trap: The user process or the kernel has a bug.
+	print_trapframe(tf);
+	if (tf->tf_cs == GD_KT)
+		panic("unhandled trap in kernel");
+	else {
+		env_destroy(curenv);
+		return;
+	}
 }
 
 void
