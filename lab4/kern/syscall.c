@@ -350,14 +350,17 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 	if (!dstenv->env_ipc_recving)
 		return -E_IPC_NOT_RECV;
 
-	if ((r = page_insert(curenv->env_pgdir, page, dstenv->env_ipc_dstva, perm)) < 0)
-		return -E_NO_MEM;
+	if ((uintptr_t)dstenv->env_ipc_dstva < UTOP) {
+		if ((r = page_insert(curenv->env_pgdir, page, dstenv->env_ipc_dstva, perm)) < 0)
+			return -E_NO_MEM;
+		dstenv->env_ipc_perm = perm;
+	}
 
 	dstenv->env_ipc_value = value;
 	dstenv->env_ipc_recving = 0;
 	dstenv->env_ipc_from = curenv->env_id;
-	dstenv->env_ipc_perm = perm;
 	dstenv->env_status = ENV_RUNNABLE;
+	dstenv->env_tf.tf_regs.reg_eax = 0;
 	return 0;
 }
 
