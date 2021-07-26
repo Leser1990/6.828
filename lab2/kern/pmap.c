@@ -363,7 +363,7 @@ pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
 	// Fill this function in
-	struct PageInfo *page;
+	struct PageInfo *page = NULL;
 	pte_t *pte_base = NULL;
 	uint32_t ptx = PTX(va); // page table index
 
