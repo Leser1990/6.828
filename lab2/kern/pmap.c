@@ -104,7 +104,7 @@ boot_alloc(uint32_t n)
 	// LAB 2: Your code here.
 	result = nextfree;
 	nextfree = ROUNDUP(nextfree + n, PGSIZE);
-	if (nextfree - result > npages * PGSIZE)
+	if (nextfree - KERNBASE > npages * PGSIZE)
 		panic("memory out of limit\n");
 
 	return result;
