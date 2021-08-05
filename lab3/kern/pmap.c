@@ -294,7 +294,7 @@ page_init(void)
 			page_free_list = &pages[i];
 		}
 	}
-	cprintf("init: free_list is 0x%x\n", page_free_list);
+	//cprintf("init: free_list is 0x%x\n", page_free_list);
 }
 
 //
