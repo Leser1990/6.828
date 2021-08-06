@@ -11,6 +11,7 @@
 #include <kern/monitor.h>
 #include <kern/kdebug.h>
 #include <kern/trap.h>
+#include <kern/env.h>
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
 
@@ -25,7 +26,9 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
-	{ "backtrace", "Display kernel backtrace info", mon_backtrace},
+	{ "backtrace", "Display kernel backtrace info", mon_backtrace },
+	{ "continue", "Continue executing the instruction", mon_continue },
+	{ "stepi", "Single step one instruction", mon_stepi },
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -81,7 +84,43 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	return 0;
 }
 
+int
+mon_continue(int argc, char **argv, struct Trapframe *tf)
+{
+	if(argc > 1) {
+		cprintf("Continue: invalid param count.\n");
+		return 0;
+	}
 
+	if (tf == NULL) {
+		cprintf("Continue: tf pointer null.\n");
+		return 0;
+	}
+
+	tf->tf_eflags &= ~FL_TF;
+	env_pop_tf(tf);
+	panic("Continue: env run failed\n");
+	return 0;
+}
+
+int
+mon_stepi(int argc, char **argv, struct Trapframe *tf)
+{
+	if(argc > 1) {
+		cprintf("Stepi: invalid param count.\n");
+		return 0;
+	}
+
+	if (tf == NULL) {
+		cprintf("Stepi: Tf pointer null.\n");
+		return 0;
+	}
+
+	tf->tf_eflags |= FL_TF;
+	env_pop_tf(tf);
+	panic("Stepi: env run failed\n");
+	return 0;
+}
 
 /***** Kernel monitor command interpreter *****/
 
