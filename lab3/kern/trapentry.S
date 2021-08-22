@@ -82,7 +82,7 @@ TRAPHANDLER_NOEC(t_syscall, T_SYSCALL)  // 48
  * so need continue push ds, es. pushal push ''struct PushRegs',
  */
 _alltraps:
-    pushl %ds
+	pushl %ds
 	pushl %es
 	pushal
 
@@ -91,5 +91,5 @@ _alltraps:
 	movw %ax, %es
 
 	pushl %esp  /* %esp indicate trap() parameter, 'struct Trapframe *' */
-    call trap
+	call trap
 
