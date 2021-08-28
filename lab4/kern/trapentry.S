@@ -95,13 +95,13 @@ TRAPHANDLER_NOEC(t_syscall, T_SYSCALL)  // 48
  * Lab 3: Your code here for _alltraps
  */
 _alltraps:
-    pushl %ds
-    pushl %es
-    pushal
+	pushl %ds
+	pushl %es
+	pushal
 
-    movw $GD_KD, %ax
-    movw %ax, %ds
-    movw %ax, %es
+	movw $GD_KD, %ax
+	movw %ax, %ds
+	movw %ax, %es
 
-    pushl %esp  /* %esp indicate trap() parameter, 'struct Trapframe *' */
-    call trap
+	pushl %esp  /* %esp indicate trap() parameter, 'struct Trapframe *' */
+	call trap
