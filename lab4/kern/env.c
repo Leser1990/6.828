@@ -392,7 +392,7 @@ load_icode(struct Env *e, uint8_t *binary)
 
 			region_alloc(e, (void *)ph->p_va, ph->p_memsz);
 			memmove((void *)ph->p_va, binary + ph->p_offset, ph->p_filesz);
-			memset((void *)(ph->p_va + ph->p_filesz), 0x0, ph->p_memsz - ph->p_filesz);
+			memset((void *)(ph->p_va + ph->p_filesz), 0, ph->p_memsz - ph->p_filesz);
 		}
 	}
 
