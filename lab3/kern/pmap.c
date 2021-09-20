@@ -524,7 +524,7 @@ void
 page_remove(pde_t *pgdir, void *va)
 {
 	// Fill this function in
-	pde_t *entry = NULL;
+	pte_t *entry = NULL;
 	struct PageInfo *page = NULL;
 
 	page = page_lookup(pgdir, va, &entry);

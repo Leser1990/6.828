@@ -123,14 +123,14 @@ fork(void)
 		if (addr == UXSTACKTOP - PGSIZE)
 			continue;
 
-		if ((uvpd[PDX(addr)] & PTE_P)  && (uvpt[PGNUM(addr)] & PTE_P)
+		if ((uvpd[PDX(addr)] & PTE_P) && (uvpt[PGNUM(addr)] & PTE_P)
 		   && (uvpt[PGNUM(addr)] & PTE_U)) {
 			duppage(envid, PGNUM(addr));
 		}
 	}
 
 	/* Execption stack */
-	if ((r = sys_page_alloc(envid, (void *)(UXSTACKTOP - PGSIZE), PTE_P | PTE_U | PTE_W)) < 0)
+	if ((r = sys_page_alloc(envid, (void *)(UXSTACKTOP - PGSIZE), PTE_P|PTE_U|PTE_W)) < 0)
 		panic("Uxstacktop alloc failed, envid=%d", envid);
 
 	/* Set pgfault upcall */

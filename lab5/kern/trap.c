@@ -431,13 +431,12 @@ page_fault_handler(struct Trapframe *tf)
 	if (curenv->env_pgfault_upcall) {
 
 		struct UTrapframe *utr = NULL;
-		if (UXSTACKTOP - PGSIZE <= tf->tf_esp && tf->tf_esp < UXSTACKTOP) {
+		if (UXSTACKTOP - PGSIZE <= tf->tf_esp && tf->tf_esp < UXSTACKTOP)
 			utr = (struct UTrapframe *)(tf->tf_esp - sizeof(struct UTrapframe) - 4);
-		} else {
+		else
 			utr = (struct UTrapframe *)(UXSTACKTOP - sizeof(struct UTrapframe));
-		}
 
-		user_mem_assert(curenv, (void *)utr, sizeof(struct UTrapframe), PTE_U | PTE_W);
+		user_mem_assert(curenv, (void *)utr, sizeof(struct UTrapframe), PTE_U|PTE_W);
 		utr->utf_fault_va = fault_va;
 		utr->utf_err = tf->tf_err;
 		utr->utf_regs = tf->tf_regs;

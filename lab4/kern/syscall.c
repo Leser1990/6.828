@@ -351,7 +351,7 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 		return -E_IPC_NOT_RECV;
 
 	if ((uintptr_t)dstenv->env_ipc_dstva < UTOP) {
-		if ((r = page_insert(curenv->env_pgdir, page, dstenv->env_ipc_dstva, perm)) < 0)
+		if ((r = page_insert(dstenv->env_pgdir, page, dstenv->env_ipc_dstva, perm)) < 0)
 			return -E_NO_MEM;
 		dstenv->env_ipc_perm = perm;
 	}
